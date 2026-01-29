@@ -1,0 +1,136 @@
+@startuml
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+hide empty members
+
+' --- Controller Layer ---
+class BookingController <<Controller>> {
+    - bookingService: IBookingService
+    + makeReservation(guestId: String, roomIds: List<String>, stayPeriod: Period): Booking
+    + cancelReservation(bookingId: String): boolean
+    + getBookingDetails(bookingId: String): Booking
+    + listBookingsByGuest(guestId: String): List<Booking>
+}
+
+' --- Service Layer ---
+interface IBookingService <<Interface>> {
+    + checkAvailability(roomIds: List<String>, stayPeriod: Period): boolean
+    + calculateTotal(bookingId: String): double
+    + applyDiscount(amount: double, guestId: String): double
+    + makeReservation(guestId: String, roomIds: List<String>, stayPeriod: Period): Booking
+    + cancelReservation(bookingId: String): boolean
+}
+
+class BookingService <<Service>> {
+    - bookingRepository: IBookingRepository
+    - discountPolicy: DiscountPolicy
+    - taxRate: double
+    + checkAvailability(roomIds: List<String>, stayPeriod: Period): boolean
+    + calculateTotal(bookingId: String): double
+    + applyDiscount(amount: double, guestId: String): double
+    + makeReservation(guestId: String, roomIds: List<String>, stayPeriod: Period): Booking
+    + cancelReservation(bookingId: String): boolean
+}
+
+' --- Repository Layer ---
+interface IBookingRepository <<Interface>> {
+    + save(booking: Booking): void
+    + findById(bookingId: String): Booking
+    + update(booking: Booking): void
+    + findByGuest(guestId: String): List<Booking>
+}
+
+' --- Entities ---
+class Hotel {
+    - id: String
+    - name: String
+    - address: String
+    + getRooms(): List<Room>
+    + isActive(): boolean
+}
+
+class Room {
+    - roomNumber: String
+    - price: double
+    - status: String
+    + isAvailable(period: Period): boolean
+    + getRoomType(): RoomType
+}
+
+class RoomType {
+    - typeName: String
+    - description: String
+    - basePrice: double
+    + getTypeName(): String
+    + getBasePrice(): double
+}
+
+class Guest {
+    - guestId: String
+    - fullName: String
+    - email: String
+    + getBookings(): List<Booking>
+    + isActive(): boolean
+}
+
+class Booking {
+    - bookingId: String
+    - checkIn: Date
+    - checkOut: Date
+    - status: String
+    + getRooms(): List<Room>
+    + getInvoice(): Invoice
+}
+
+class Invoice {
+    - invoiceId: String
+    - totalAmount: double
+    - issuedDate: Date
+    + printInvoice(): void
+    + getStatus(): String
+}
+
+class Payment {
+    - paymentId: String
+    - method: String
+    - status: String
+    + process(): boolean
+    + getAmount(): double
+}
+
+class DiscountPolicy {
+    - policyId: String
+    - description: String
+    - discountRate: double
+    + apply(amount: double): double
+    + isApplicable(guestId: String): boolean
+}
+
+class Period {
+    - startDate: Date
+    - endDate: Date
+    + getDays(): int
+    + overlaps(other: Period): boolean
+}
+
+' --- Relationships ---
+
+' Realization
+IBookingService <|.. BookingService
+
+' Dependency
+BookingController ..> IBookingService
+BookingService ..> IBookingRepository
+BookingService ..> DiscountPolicy
+BookingService ..> Room
+BookingService ..> RoomType
+
+' Composition & Aggregation & Association
+Hotel "1" *-- "*" Room : "Composition"
+Room "*" --> "1" RoomType : "Association"
+Guest "1" o-- "*" Booking : "Aggregation"
+Booking "1" *-- "1..*" Room : "Composition"
+Booking "1" o-- "1..*" Invoice : "Aggregation"
+Booking "1" *-- "0..1" Payment : "Composition"
+
+@enduml
